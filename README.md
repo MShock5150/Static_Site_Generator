@@ -56,6 +56,55 @@ This will build the site with the correct base path for deployment.
 
 This generates the final site in the `docs/` directory, which can then be committed and pushed to GitHub.
 
+## Using as a Template for a New Site
+
+This repository can be used as a template to generate new static websites. The process involves cloning the project, cleaning out the old content, and then connecting it to a new GitHub repository for the new site.
+
+### 1. Create the New Project Locally
+
+Clone this repository into a new folder for your new project.
+
+```bash
+git clone [https://github.com/MShock5150/Static_Site_Generator.git](https://github.com/MShock5150/Static_Site_Generator.git) new-project-name
+cd new-project-name
+```
+
+### 2. Clean the Project Directories
+
+Remove the old content and static files to prepare the project for your new site. The build script will automatically handle the output directory (`docs/`).
+
+```bash
+rm -rf content/*
+rm -rf static/*
+```
+
+### 3. Connect to a New GitHub Repository
+
+First, create a new, empty repository on GitHub for your new project (e.g., `new-site-repo`).
+
+Next, remove the old remote link and connect your local project to the new repository.
+
+```bash
+# Remove the link to the original SSG repository
+git remote remove origin
+
+# Add the link to your new repository
+git remote add origin [https://github.com/YOUR_USERNAME/new-site-repo.git](https://github.com/YOUR_USERNAME/new-site-repo.git)
+```
+
+### 4. Commit and Push
+
+Finally, commit the clean project structure and push it to your new repository to establish the connection.
+
+```bash
+git add .
+git commit -m "Initial commit: Set up SSG for new site"
+git push -u origin main
+```
+
+You now have an independent project for your new website, powered by this static site generator.
+
 ---
 
 *This site was generated with a custom-built static site generator from the course on [Boot.dev](https://www.boot.dev).*
+
