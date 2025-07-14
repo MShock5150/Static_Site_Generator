@@ -1,108 +1,50 @@
-import re
-from textnode import TextNode, TextType
-from leafnode import LeafNode
+import os
+import shutil
+from gencontent import generate_page
 
 
-def text_node_to_html_node(text_node):
-    if text_node.text_type == TextType.TEXT:
-        return LeafNode(None, text_node.text)
-    if text_node.text_type == TextType.BOLD:
-        return LeafNode("b", text_node.text)
-    if text_node.text_type == TextType.ITALIC:
-        return LeafNode("i", text_node.text)
-    if text_node.text_type == TextType.CODE:
-        return LeafNode("code", text_node.text)
-    if text_node.text_type == TextType.LINK:
-        return LeafNode("a", text_node.text, {"href": text_node.url})
-    if text_node.text_type == TextType.IMAGE:
-        return LeafNode("img", "", {"src": text_node.url, "alt": text_node.text})
-    raise Exception(f"Invalid text type: {text_node.text_type}")
-
-
-def split_nodes_delimiter(old_nodes, delimiter, text_type):
-    new_nodes = []
-    for node in old_nodes:
-        if node.text_type != TextType.TEXT:
-            new_nodes.append(node)
+def copy_directory_recursive(source_path, dest_path):
+    if not os.path.exists(source_path):
+        raise ValueError(f"Source path does not exist {source_path}")
+    files = os.listdir(source_path)
+    for file in files:
+        source_file_path = os.path.join(source_path, file)
+        dest_file_path = os.path.join(dest_path, file)
+        print(f"Copying {source_file_path} to {dest_file_path}")
+        if os.path.isfile(source_file_path):
+            shutil.copy(source_file_path, dest_file_path)
         else:
-            split_nodes = node.text.split(delimiter)
-            if len(split_nodes) % 2 == 0:
-                raise Exception("Invalid Markdown syntax: missing closing delimiter.")
-            temp_nodes = []
-            for i, string in enumerate(split_nodes):
-                if string:
-                    if i % 2 == 0:
-                        temp_nodes.append(TextNode(string, TextType.TEXT))
-                    else:
-                        temp_nodes.append(TextNode(string, text_type))
-            new_nodes.extend(temp_nodes)
-    return new_nodes
+            os.mkdir(dest_file_path)
+            copy_directory_recursive(source_file_path, dest_file_path)
 
 
-def extract_markdown_images(text):
-    return re.findall(r"!\[([^\[\]]*)\]\(([^\(\)]*)\)", text)
-
-
-def extract_markdown_links(text):
-    return re.findall(r"(?<!!)\[([^\[\]]*)\]\(([^\(\)]*)\)", text)
-
-
-def split_nodes_image(old_nodes):
-    new_nodes = []
-    for node in old_nodes:
-        if node.text_type != TextType.TEXT:
-            new_nodes.append(node)
-            continue
-        images = extract_markdown_images(node.text)
-        if not images:
-            new_nodes.append(node)
-            continue
-        remaining_text = node.text
-        for alt_text, url in images:
-            split = remaining_text.split(f"![{alt_text}]({url})", 1)
-            if split[0] != "":
-                new_nodes.append(TextNode(split[0], TextType.TEXT))
-            new_nodes.append(TextNode(alt_text, TextType.IMAGE, url))
-            remaining_text = split[1]
-        if remaining_text:
-            new_nodes.append(TextNode(remaining_text, TextType.TEXT))
-    return new_nodes
-
-
-def split_nodes_link(old_nodes):
-    new_nodes = []
-    for node in old_nodes:
-        if node.text_type != TextType.TEXT:
-            new_nodes.append(node)
-            continue
-        links = extract_markdown_links(node.text)
-        if not links:
-            new_nodes.append(node)
-            continue
-        remaining_text = node.text
-        for alt_text, url in links:
-            split = remaining_text.split(f"[{alt_text}]({url})", 1)
-            if split[0] != "":
-                new_nodes.append(TextNode(split[0], TextType.TEXT))
-            new_nodes.append(TextNode(alt_text, TextType.LINK, url))
-            remaining_text = split[1]
-        if remaining_text:
-            new_nodes.append(TextNode(remaining_text, TextType.TEXT))
-    return new_nodes
-
-
-def text_to_textnodes(text):
-    nodes = [TextNode(text, TextType.TEXT)]
-    nodes = split_nodes_delimiter(nodes, "**", TextType.BOLD)
-    nodes = split_nodes_delimiter(nodes, "*", TextType.ITALIC)
-    nodes = split_nodes_delimiter(nodes, "`", TextType.CODE)
-    nodes = split_nodes_image(nodes)
-    nodes = split_nodes_link(nodes)
-    return nodes
+def generate_page_recursive(source_path, template_path, dest_path):
+    files = os.listdir(source_path)
+    for file in files:
+        source_file_path = os.path.join(source_path, file)
+        dest_file_path = os.path.join(dest_path, file)
+        if os.path.isfile(source_file_path) and source_file_path.endswith(".md"):
+            html_dest_path = dest_file_path.replace(".md", ".html")
+            generate_page(source_file_path, template_path, html_dest_path)
+        elif os.path.isdir(source_file_path):
+            os.makedirs(dest_file_path, exist_ok=True)
+            generate_page_recursive(source_file_path, template_path, dest_file_path)
 
 
 def main():
-    pass
+    current_dir = os.getcwd()
+    static_source = os.path.join(current_dir, "static")
+    public_dest = os.path.join(current_dir, "public")
+    print(f"Cleaning public directory: {public_dest}")
+    if os.path.exists(public_dest):
+        shutil.rmtree(public_dest)
+    os.mkdir(public_dest)
+    print(f"Copying from {static_source} to {public_dest}")
+    copy_directory_recursive(static_source, public_dest)
+    content_source = os.path.join(current_dir, "content")
+    template_path = os.path.join(current_dir, "template.html")
+    print(f"Generating pages from {content_source} to {public_dest}")
+    generate_page_recursive(content_source, template_path, public_dest)
 
 
 main()
